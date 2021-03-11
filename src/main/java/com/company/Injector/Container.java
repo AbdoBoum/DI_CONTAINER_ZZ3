@@ -2,12 +2,14 @@ package com.company.Injector;
 
 import com.company.Anotations.Inject;
 import com.company.Anotations.Service;
+import com.company.Anotations.Value;
 import org.apache.log4j.Logger;
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,6 +28,8 @@ public class Container implements ContainerInterface {
 
     private Map<Class, Object> singletonInstance;
 
+    private Map<String, Object> namedValues;
+
     Reflections reflections;
 
     Logger logger = Logger.getLogger(Container.class);
@@ -38,6 +42,7 @@ public class Container implements ContainerInterface {
      * @val instantiated: store classes that were instantiated before
      * @val singletonClasses: store classes annotated with @Singleton
      * @val singletonInstance: store a unique instance for each class annotated with @Singleton
+     * @val namedValues: store named values
      */
     public Container() {
         interfaceMappings = new HashMap<>();
@@ -45,6 +50,7 @@ public class Container implements ContainerInterface {
         instantiableClasses = new HashSet<>();
         singletonInstance = new HashMap<>();
         singletonClasses = new HashSet<>();
+        namedValues = new HashMap<>();
         reflections = new Reflections(
                 new ConfigurationBuilder()
                         .setUrls(ClasspathHelper.forJavaClassPath())
@@ -60,7 +66,6 @@ public class Container implements ContainerInterface {
             Class<?>[] interfaces = clazz.getInterfaces();
             if (interfaces.length != 0)
                 for (Class<?> interfaceClass : interfaces) bind((Class<T>) interfaceClass, (Class<T>) clazz);
-
         }
     }
 
@@ -118,6 +123,7 @@ public class Container implements ContainerInterface {
 
                 if (!instantiableClasses.contains(clazz)) instantiableClasses.add(clazz);
                 if (isSingleton(clazz)) singletonInstance.put(clazz, implementationClass);
+                injectNamedValues(implementationClass);
                 return implementationClass;
             } catch (Exception e) {
                 throw new ContainerException(
@@ -129,12 +135,25 @@ public class Container implements ContainerInterface {
 
             if (!instantiableClasses.contains(clazz)) instantiableClasses.add(clazz);
             if (isSingleton(clazz)) singletonInstance.put(clazz, implementationClass);
+            injectNamedValues(implementationClass);
             return implementationClass;
 
         } catch (Exception e) {
             throw new ContainerException(
                     ERROR_MSG + "An Exception was thrown during the instantiation.", e);
         }
+    }
+
+    private <T> void injectNamedValues(T implementationClass) {
+        Field[] fields = implementationClass.getClass().getDeclaredFields();
+        Arrays.stream(fields).filter(field -> field.isAnnotationPresent(Value.class))
+                .forEach(field -> {
+                    try {
+                        field.set(implementationClass, field.getAnnotation(Value.class).value());
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     /**
