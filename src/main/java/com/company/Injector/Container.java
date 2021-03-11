@@ -1,7 +1,11 @@
 package com.company.Injector;
 
 import com.company.Anotations.Inject;
+import com.company.Anotations.Service;
 import org.apache.log4j.Logger;
+import org.reflections.Reflections;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
@@ -22,6 +26,8 @@ public class Container implements ContainerInterface {
 
     private Map<Class, Object> singletonInstance;
 
+    Reflections reflections;
+
     Logger logger = Logger.getLogger(Container.class);
 
     /** instantiate a container
@@ -37,6 +43,22 @@ public class Container implements ContainerInterface {
         instantiableClasses = new HashSet<>();
         singletonInstance = new HashMap<>();
         singletonClasses = new HashSet<>();
+        reflections = new Reflections(
+                new ConfigurationBuilder()
+                        .setUrls(ClasspathHelper.forJavaClassPath())
+        );
+        scanClasses();
+    }
+
+    public <T> void scanClasses() {
+        Set<Class<?>> annotated =
+                reflections.getTypesAnnotatedWith(Service.class);
+        for (Class<?> clazz: annotated) {
+            Class<?>[] interfaces = clazz.getInterfaces();
+            if (interfaces.length != 0)
+                for(Class<?> interfaceClass: interfaces) bind((Class<T>)interfaceClass, (Class<T>)clazz);
+
+        }
     }
 
     @Override
