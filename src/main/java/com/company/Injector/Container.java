@@ -30,7 +30,9 @@ public class Container implements ContainerInterface {
 
     Logger logger = Logger.getLogger(Container.class);
 
-    /** instantiate a container
+    /**
+     * instantiate a container
+     *
      * @val interfaceMappings: store interfaces and their implementation
      * @val historicRequests: store classes that were requested to be instantiated - used to detect cycle in dependencies
      * @val instantiated: store classes that were instantiated before
@@ -50,13 +52,14 @@ public class Container implements ContainerInterface {
         scanClasses();
     }
 
+    @Override
     public <T> void scanClasses() {
         Set<Class<?>> annotated =
                 reflections.getTypesAnnotatedWith(Service.class);
-        for (Class<?> clazz: annotated) {
+        for (Class<?> clazz : annotated) {
             Class<?>[] interfaces = clazz.getInterfaces();
             if (interfaces.length != 0)
-                for(Class<?> interfaceClass: interfaces) bind((Class<T>)interfaceClass, (Class<T>)clazz);
+                for (Class<?> interfaceClass : interfaces) bind((Class<T>) interfaceClass, (Class<T>) clazz);
 
         }
     }
@@ -91,10 +94,10 @@ public class Container implements ContainerInterface {
              * if it's a singleton class we return directly the implementation
              */
             if (singletonInstance.containsKey(clazz)) {
-                return (T)singletonInstance.get(clazz);
+                return (T) singletonInstance.get(clazz);
             }
 
-            return (T)createNewInstance(clazz);
+            return (T) createNewInstance(clazz);
         } catch (ContainerException e) {
             throw new ContainerException(ERROR_MSG + e.getMessage());
         }
@@ -103,7 +106,7 @@ public class Container implements ContainerInterface {
     private <T> Object createNewInstance(Class<T> clazz) {
         Constructor<T> constructor = findConstructor(clazz);
 
-        if(constructor != null) {
+        if (constructor != null) {
             Parameter[] parameters = constructor.getParameters();
 
             List<Object> arguments = Arrays.stream(parameters)
@@ -121,21 +124,22 @@ public class Container implements ContainerInterface {
                         ERROR_MSG + "An Exception was thrown during the instantiation.", e);
             }
         }
-            try {
-                T implementationClass = clazz.newInstance();
+        try {
+            T implementationClass = clazz.newInstance();
 
-                if (!instantiableClasses.contains(clazz)) instantiableClasses.add(clazz);
-                if (isSingleton(clazz)) singletonInstance.put(clazz, implementationClass);
-                return implementationClass;
+            if (!instantiableClasses.contains(clazz)) instantiableClasses.add(clazz);
+            if (isSingleton(clazz)) singletonInstance.put(clazz, implementationClass);
+            return implementationClass;
 
-            } catch (Exception e) {
-                throw new ContainerException(
-                        ERROR_MSG + "An Exception was thrown during the instantiation.", e);
-            }
+        } catch (Exception e) {
+            throw new ContainerException(
+                    ERROR_MSG + "An Exception was thrown during the instantiation.", e);
+        }
     }
 
     /**
      * find the constructor to use to instantiate the class
+     *
      * @param clazz: the class where we search for the constructor
      * @return
      */
@@ -173,13 +177,16 @@ public class Container implements ContainerInterface {
 
     /**
      * Bind an interface to its implementation
-     * @param interfaceClass: The interface we want to bind
+     *
+     * @param interfaceClass:      The interface we want to bind
      * @param implementationClass: The implementation of the interface
      */
     @Override
     public <T> void bind(Class<T> interfaceClass, Class<? extends T> implementationClass) {
-        if (!interfaceClass.isInterface()) throw new IllegalStateException("[" + interfaceClass.getName() + "] is not an interface.");
-        if (implementationClass.isInterface() || ContainerInterface.isAbstractClass(implementationClass)) throw new ContainerException("[" + implementationClass.getName() + "] should not be an interface or abstract class.");
+        if (!interfaceClass.isInterface())
+            throw new IllegalStateException("[" + interfaceClass.getName() + "] is not an interface.");
+        if (implementationClass.isInterface() || ContainerInterface.isAbstractClass(implementationClass))
+            throw new ContainerException("[" + implementationClass.getName() + "] should not be an interface or abstract class.");
         interfaceMappings.put(interfaceClass, implementationClass);
     }
 

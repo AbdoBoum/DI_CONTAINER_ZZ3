@@ -7,6 +7,8 @@ import java.lang.reflect.Modifier;
 
 public interface ContainerInterface {
 
+    <T> void scanClasses();
+
     <T> T getBeanInstance(Class<T> clazz);
 
     <T> void bind(Class<T> interfaceClass, Class<? extends T> implementationClass);
